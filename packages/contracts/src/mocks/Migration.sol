@@ -15,6 +15,8 @@ pragma solidity ^0.8.8;
 
 /* solhint-disable no-unused-import */
 
+import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {PluginRepo} from "@aragon/osx-v1.3.0/framework/plugin/repo/PluginRepo.sol";
 import {ProxyFactory} from "@aragon/osx-commons-contracts/src/utils/deployment/ProxyFactory.sol";
 
 /* solhint-enable no-unused-import */

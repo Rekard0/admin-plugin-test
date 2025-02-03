@@ -1,5 +1,6 @@
 import {PLUGIN_SETUP_CONTRACT_NAME} from '../../plugin-settings';
 import {AdminSetup__factory, Admin__factory} from '../../typechain';
+import {isZkSync} from '../../utils/zkSync';
 import {DeployFunction} from 'hardhat-deploy/types';
 import {HardhatRuntimeEnvironment} from 'hardhat/types';
 import path from 'path';
@@ -29,10 +30,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     address: setup.address,
     args: setupDeployment.args,
   });
-  hre.aragonToVerifyContracts.push({
-    address: implementation.address,
-    args: [],
-  });
+  // for zkSync we deploy from the setup as new so we don't implementation address
+  if (!isZkSync(hre.network.name)) {
+    hre.aragonToVerifyContracts.push({
+      address: implementation.address,
+      args: [],
+    });
+  }
 };
 
 export default func;

@@ -1,5 +1,5 @@
-import {IPlugin, ProxyFactory__factory} from '../../typechain';
-import {ProxyCreatedEvent} from '../../typechain/@aragon/osx-commons-contracts/src/utils/deployment/ProxyFactory';
+import {IPlugin} from '../../typechain';
+import {ARTIFACT_SOURCES} from '../test-utils/wrapper';
 import {
   DAO_PERMISSIONS,
   PLUGIN_SETUP_PROCESSOR_PERMISSIONS,
@@ -11,12 +11,11 @@ import {
   PluginSetupProcessor,
   DAOStructs,
   DAO,
-  DAO__factory,
 } from '@aragon/osx-ethers';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
 import {expect} from 'chai';
 import {ContractTransaction} from 'ethers';
-import {ethers} from 'hardhat';
+import hre, {ethers} from 'hardhat';
 
 export async function installPLugin(
   signer: SignerWithAddress,
@@ -230,25 +229,16 @@ export async function createDaoProxy(
   deployer: SignerWithAddress,
   dummyMetadata: string
 ): Promise<DAO> {
-  const daoImplementation = await new DAO__factory(deployer).deploy();
-  const daoProxyFactory = await new ProxyFactory__factory(deployer).deploy(
-    daoImplementation.address
+  const daoProxy = await hre.wrapper.deploy(ARTIFACT_SOURCES.DAO, {
+    withProxy: true,
+  });
+
+  await daoProxy.initialize(
+    dummyMetadata,
+    deployer.address,
+    ethers.constants.AddressZero,
+    dummyMetadata
   );
 
-  const daoInitData = daoImplementation.interface.encodeFunctionData(
-    'initialize',
-    [
-      dummyMetadata,
-      deployer.address,
-      ethers.constants.AddressZero,
-      dummyMetadata,
-    ]
-  );
-  const tx = await daoProxyFactory.deployUUPSProxy(daoInitData);
-  const event = findEvent<ProxyCreatedEvent>(
-    await tx.wait(),
-    daoProxyFactory.interface.getEvent('ProxyCreated').name
-  );
-  const dao = DAO__factory.connect(event.args.proxy, deployer);
-  return dao;
+  return daoProxy;
 }

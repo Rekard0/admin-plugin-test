@@ -3,6 +3,7 @@ import {PLUGIN_CONTRACT_NAME} from '../../plugin-settings';
 import {
   Admin,
   Admin__factory,
+  AdminZkSync__factory,
   CustomExecutorMock__factory,
   IERC165Upgradeable__factory,
   IMembership__factory,
@@ -11,8 +12,8 @@ import {
   IProtocolVersion__factory,
   ProxyFactory__factory,
 } from '../../typechain';
-import {ProxyCreatedEvent} from '../../typechain/@aragon/osx-commons-contracts/src/utils/deployment/ProxyFactory';
 import {ProposalCreatedEvent} from '../../typechain/src/Admin';
+import {isZkSync, ZK_SYNC_NETWORKS} from '../../utils/zkSync';
 import {
   ADMIN_INTERFACE,
   EXECUTE_PROPOSAL_PERMISSION_ID,
@@ -20,6 +21,12 @@ import {
   SET_TARGET_CONFIG_PERMISSION_ID,
   TargetConfig,
 } from '../admin-constants';
+import {loadFixtureCustom} from '../test-utils/fixture';
+import {
+  skipTestSuiteIfNetworkIsNotZkSync,
+  skipTestSuiteIfNetworkIsZkSync,
+} from '../test-utils/skip-functions';
+import {ARTIFACT_SOURCES} from '../test-utils/wrapper';
 import {
   findEvent,
   findEventTopicLog,
@@ -27,12 +34,11 @@ import {
   DAO_PERMISSIONS,
 } from '@aragon/osx-commons-sdk';
 import {DAO, DAOEvents, DAOStructs} from '@aragon/osx-ethers';
-import {loadFixture} from '@nomicfoundation/hardhat-network-helpers';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
 import {expect} from 'chai';
 import {BigNumber} from 'ethers';
 import {defaultAbiCoder, keccak256} from 'ethers/lib/utils';
-import {ethers} from 'hardhat';
+import hre, {ethers} from 'hardhat';
 
 let chainId: number;
 
@@ -62,31 +68,44 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   before(async () => {
     chainId = (await ethers.provider.getNetwork()).chainId;
   });
+  skipTestSuiteIfNetworkIsZkSync('initialize', () => {
+    describe('initialize', async () => {
+      it('reverts if trying to re-initialize', async () => {
+        const {
+          initializedPlugin: plugin,
+          dao,
+          targetConfig,
+        } = await loadFixtureCustom(fixture);
+        await expect(
+          plugin.initialize(dao.address, targetConfig)
+        ).to.be.revertedWith('Initializable: contract is already initialized');
+      });
 
-  describe('initialize', async () => {
-    it('reverts if trying to re-initialize', async () => {
-      const {
-        initializedPlugin: plugin,
-        dao,
-        targetConfig,
-      } = await loadFixture(fixture);
-      await expect(
-        plugin.initialize(dao.address, targetConfig)
-      ).to.be.revertedWith('Initializable: contract is already initialized');
+      it('emits the `MembershipContractAnnounced` event', async () => {
+        const {
+          uninitializedPlugin: plugin,
+          dao,
+          targetConfig,
+        } = await loadFixtureCustom(fixture);
+        await expect(plugin.initialize(dao.address, targetConfig))
+          .to.emit(
+            plugin,
+            plugin.interface.getEvent('MembershipContractAnnounced').name
+          )
+          .withArgs(dao.address);
+      });
     });
+  });
 
-    it('emits the `MembershipContractAnnounced` event', async () => {
-      const {
-        uninitializedPlugin: plugin,
-        dao,
-        targetConfig,
-      } = await loadFixture(fixture);
-      await expect(plugin.initialize(dao.address, targetConfig))
-        .to.emit(
-          plugin,
-          plugin.interface.getEvent('MembershipContractAnnounced').name
-        )
-        .withArgs(dao.address);
+  skipTestSuiteIfNetworkIsNotZkSync('constructor', () => {
+    describe('constructor', async () => {
+      it('emits the `MembershipContractAnnounced` event', async () => {
+        const {dao, initializedPlugin} = await loadFixtureCustom(fixture);
+
+        await expect(initializedPlugin.deployTransaction)
+          .to.emit(initializedPlugin, 'MembershipContractAnnounced')
+          .withArgs(dao.address);
+      });
     });
   });
 
@@ -97,7 +116,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         bob,
         initializedPlugin: plugin,
         dao,
-      } = await loadFixture(fixture);
+      } = await loadFixtureCustom(fixture);
 
       await dao.grant(
         plugin.address,
@@ -112,42 +131,42 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
   describe('ERC-165', async () => {
     it('does not support the empty interface', async () => {
-      const {initializedPlugin: plugin} = await loadFixture(fixture);
+      const {initializedPlugin: plugin} = await loadFixtureCustom(fixture);
       expect(await plugin.supportsInterface('0xffffffff')).to.be.false;
     });
 
     it('supports the `IERC165Upgradeable` interface', async () => {
-      const {initializedPlugin: plugin} = await loadFixture(fixture);
+      const {initializedPlugin: plugin} = await loadFixtureCustom(fixture);
       const iface = IERC165Upgradeable__factory.createInterface();
       expect(await plugin.supportsInterface(getInterfaceId(iface))).to.be.true;
     });
 
     it('supports the `IPlugin` interface', async () => {
-      const {initializedPlugin: plugin} = await loadFixture(fixture);
+      const {initializedPlugin: plugin} = await loadFixtureCustom(fixture);
       const iface = IPlugin__factory.createInterface();
       expect(await plugin.supportsInterface(getInterfaceId(iface))).to.be.true;
     });
 
     it('supports the `IProtocolVersion` interface', async () => {
-      const {initializedPlugin: plugin} = await loadFixture(fixture);
+      const {initializedPlugin: plugin} = await loadFixtureCustom(fixture);
       const iface = IProtocolVersion__factory.createInterface();
       expect(await plugin.supportsInterface(getInterfaceId(iface))).to.be.true;
     });
 
     it('supports the `IProposal` interface', async () => {
-      const {initializedPlugin: plugin} = await loadFixture(fixture);
+      const {initializedPlugin: plugin} = await loadFixtureCustom(fixture);
       const iface = IProposal__factory.createInterface();
       expect(await plugin.supportsInterface(getInterfaceId(iface))).to.be.true;
     });
 
     it('supports the `IMembership` interface', async () => {
-      const {initializedPlugin: plugin} = await loadFixture(fixture);
+      const {initializedPlugin: plugin} = await loadFixtureCustom(fixture);
       const iface = IMembership__factory.createInterface();
       expect(await plugin.supportsInterface(getInterfaceId(iface))).to.be.true;
     });
 
     it('supports the `Admin` interface', async () => {
-      const {initializedPlugin: plugin} = await loadFixture(fixture);
+      const {initializedPlugin: plugin} = await loadFixtureCustom(fixture);
       const interfaceId = getInterfaceId(ADMIN_INTERFACE);
       expect(await plugin.supportsInterface(interfaceId)).to.be.true;
     });
@@ -155,7 +174,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
   describe('execute', async () => {
     it('always reverts', async () => {
-      const {initializedPlugin: plugin} = await loadFixture(fixture);
+      const {initializedPlugin: plugin} = await loadFixtureCustom(fixture);
 
       await expect(plugin.execute(1)).to.be.revertedWithCustomError(
         plugin,
@@ -172,7 +191,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         dao,
         dummyActions,
         dummyMetadata,
-      } = await loadFixture(fixture);
+      } = await loadFixtureCustom(fixture);
 
       // Check that the Alice hasn't `EXECUTE_PROPOSAL_PERMISSION_ID` permission on the Admin plugin
       expect(
@@ -204,7 +223,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         dao,
         dummyActions,
         dummyMetadata,
-      } = await loadFixture(fixture);
+      } = await loadFixtureCustom(fixture);
 
       // Grant Alice the `EXECUTE_PROPOSAL_PERMISSION_ID` permission on the Admin plugin
       await dao.grant(
@@ -242,7 +261,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         dao,
         dummyActions,
         dummyMetadata,
-      } = await loadFixture(fixture);
+      } = await loadFixtureCustom(fixture);
 
       // Grant Alice the `EXECUTE_PROPOSAL_PERMISSION_ID` permission on the Admin plugin
       await dao.grant(
@@ -289,7 +308,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         dao,
         dummyActions,
         dummyMetadata,
-      } = await loadFixture(fixture);
+      } = await loadFixtureCustom(fixture);
 
       // Grant Alice the `EXECUTE_PROPOSAL_PERMISSION_ID` permission on the Admin plugin
       await dao.grant(
@@ -324,7 +343,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         dao,
         dummyActions,
         dummyMetadata,
-      } = await loadFixture(fixture);
+      } = await loadFixtureCustom(fixture);
 
       // Grant Alice the `EXECUTE_PROPOSAL_PERMISSION_ID` permission on the Admin plugin
       await dao.grant(
@@ -398,7 +417,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         dummyActions,
         dao,
         initializedPlugin: plugin,
-      } = await loadFixture(fixture);
+      } = await loadFixtureCustom(fixture);
 
       // Grant Alice the `EXECUTE_PROPOSAL_PERMISSION_ID` permission on the Admin plugin
       await dao.grant(
@@ -429,10 +448,11 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         deployer,
         dao,
         initializedPlugin: plugin,
-      } = await loadFixture(fixture);
+      } = await loadFixtureCustom(fixture);
 
-      const executorFactory = new CustomExecutorMock__factory(deployer);
-      const executor = await executorFactory.deploy();
+      const executor = await hre.wrapper.deploy(
+        ARTIFACT_SOURCES.CustomExecutorMock
+      );
 
       const abiA = CustomExecutorMock__factory.abi;
       const abiB = Admin__factory.abi;
@@ -487,43 +507,33 @@ async function fixture(): Promise<FixtureResult> {
   const dummyMetadata = '0x12345678';
   const dao = await createDaoProxy(deployer, dummyMetadata);
 
-  const adminPluginImplementation = await new Admin__factory(deployer).deploy();
-  const adminProxyFactory = await new ProxyFactory__factory(deployer).deploy(
-    adminPluginImplementation.address
-  );
-
   const targetConfig: TargetConfig = {
     operation: Operation.call,
     target: dao.address,
   };
 
-  // Create an initialized plugin clone
-  const adminPluginInitdata =
-    adminPluginImplementation.interface.encodeFunctionData('initialize', [
-      dao.address,
-      targetConfig,
-    ]);
-  const deploymentTx1 = await adminProxyFactory.deployMinimalProxy(
-    adminPluginInitdata
+  const isZksync = isZkSync(hre.network.name);
+
+  const artifactSource = isZksync
+    ? ARTIFACT_SOURCES.AdminZkSync
+    : ARTIFACT_SOURCES.Admin;
+
+  const deployArgs = isZksync
+    ? {withProxy: false, args: [dao.address, targetConfig]}
+    : {withProxy: true};
+
+  const initializedPlugin = await hre.wrapper.deploy(
+    artifactSource,
+    deployArgs
   );
-  const proxyCreatedEvent1 = await findEvent<ProxyCreatedEvent>(
-    await deploymentTx1.wait(),
-    adminProxyFactory.interface.getEvent('ProxyCreated').name
-  );
-  const initializedPlugin = Admin__factory.connect(
-    proxyCreatedEvent1.args.proxy,
-    deployer
+  const uninitializedPlugin = await hre.wrapper.deploy(
+    artifactSource,
+    deployArgs
   );
 
-  const deploymentTx2 = await adminProxyFactory.deployMinimalProxy([]);
-  const proxyCreatedEvent2 = await findEvent<ProxyCreatedEvent>(
-    await deploymentTx2.wait(),
-    adminProxyFactory.interface.getEvent('ProxyCreated').name
-  );
-  const uninitializedPlugin = Admin__factory.connect(
-    proxyCreatedEvent2.args.proxy,
-    deployer
-  );
+  if (!isZksync) {
+    await initializedPlugin.initialize(dao.address, targetConfig);
+  }
 
   const dummyActions: DAOStructs.ActionStruct[] = [
     {

@@ -9,14 +9,14 @@ import {ProxyLib} from "@aragon/osx-commons-contracts/src/utils/deployment/Proxy
 import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {IPlugin} from "@aragon/osx-commons-contracts/src/plugin/IPlugin.sol";
 
-import {Admin} from "./Admin.sol";
+import {AdminZkSync as Admin} from "./AdminZkSync.sol";
 
 /// @title AdminAddressSetup
 /// @author Aragon X - 2022-2024
 /// @notice The setup contract of the `Admin` plugin.
 /// @dev v1.2 (Release 1, Build 2)
 /// @custom:security-contact sirt@aragon.org
-contract AdminSetup is PluginSetup {
+contract AdminSetupZkSync is PluginSetup {
     using ProxyLib for address;
 
     /// @notice The ID of the permission required to call the `execute` function.
@@ -35,7 +35,8 @@ contract AdminSetup is PluginSetup {
     error AdminAddressInvalid(address admin);
 
     /// @notice The constructor setting the `Admin` implementation contract to clone from.
-    constructor() PluginSetup(address(new Admin())) {}
+    /// @dev Since this is only ment to be used for zkSync we pass address(0) as implementation
+    constructor() PluginSetup(address(0)) {}
 
     /// @inheritdoc IPluginSetup
     function prepareInstallation(
@@ -53,8 +54,7 @@ contract AdminSetup is PluginSetup {
         }
 
         // Clone and initialize the plugin contract.
-        bytes memory initData = abi.encodeCall(Admin.initialize, (IDAO(_dao), targetConfig));
-        plugin = IMPLEMENTATION.deployMinimalProxy(initData);
+        plugin = address(new Admin(IDAO(_dao), targetConfig));
 
         // Prepare permissions
         PermissionLib.MultiTargetPermission[]

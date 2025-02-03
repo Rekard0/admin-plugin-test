@@ -2,6 +2,7 @@ import {METADATA, VERSION} from '../../plugin-settings';
 import {AdminSetup, AdminSetup__factory, Admin__factory} from '../../typechain';
 import {getProductionNetworkName, findPluginRepo} from '../../utils/helpers';
 import {Operation, TargetConfig} from '../admin-constants';
+import {skipTestSuiteIfNetworkIsZkSync} from '../test-utils/skip-functions';
 import {createDaoProxy, installPLugin, uninstallPLugin} from './test-helpers';
 import {
   getLatestNetworkDeployment,
@@ -27,69 +28,72 @@ import env, {deployments, ethers} from 'hardhat';
 
 const productionNetworkName = getProductionNetworkName(env);
 
-describe(`PluginSetup processing on network '${productionNetworkName}'`, function () {
-  it('installs & uninstalls the current build', async () => {
-    const {alice, deployer, psp, dao, pluginSetupRef, targetConfig} =
-      await loadFixture(fixture);
+skipTestSuiteIfNetworkIsZkSync(
+  `PluginSetup processing on network '${productionNetworkName}'`,
+  function () {
+    it('installs & uninstalls the current build', async () => {
+      const {alice, deployer, psp, dao, pluginSetupRef, targetConfig} =
+        await loadFixture(fixture);
 
-    // Grant deployer all required permissions
-    await dao
-      .connect(deployer)
-      .grant(
-        psp.address,
-        deployer.address,
-        PLUGIN_SETUP_PROCESSOR_PERMISSIONS.APPLY_INSTALLATION_PERMISSION_ID
+      // Grant deployer all required permissions
+      await dao
+        .connect(deployer)
+        .grant(
+          psp.address,
+          deployer.address,
+          PLUGIN_SETUP_PROCESSOR_PERMISSIONS.APPLY_INSTALLATION_PERMISSION_ID
+        );
+      await dao
+        .connect(deployer)
+        .grant(
+          psp.address,
+          deployer.address,
+          PLUGIN_SETUP_PROCESSOR_PERMISSIONS.APPLY_UNINSTALLATION_PERMISSION_ID
+        );
+      await dao
+        .connect(deployer)
+        .grant(dao.address, psp.address, DAO_PERMISSIONS.ROOT_PERMISSION_ID);
+
+      // Install the current build.
+      const results = await installPLugin(
+        deployer,
+        psp,
+        dao,
+        pluginSetupRef,
+        ethers.utils.defaultAbiCoder.encode(
+          getNamedTypesFromMetadata(
+            METADATA.build.pluginSetup.prepareInstallation.inputs
+          ),
+          [alice.address, targetConfig]
+        )
       );
-    await dao
-      .connect(deployer)
-      .grant(
-        psp.address,
-        deployer.address,
-        PLUGIN_SETUP_PROCESSOR_PERMISSIONS.APPLY_UNINSTALLATION_PERMISSION_ID
+
+      const plugin = Admin__factory.connect(
+        results.preparedEvent.args.plugin,
+        deployer
       );
-    await dao
-      .connect(deployer)
-      .grant(dao.address, psp.address, DAO_PERMISSIONS.ROOT_PERMISSION_ID);
 
-    // Install the current build.
-    const results = await installPLugin(
-      deployer,
-      psp,
-      dao,
-      pluginSetupRef,
-      ethers.utils.defaultAbiCoder.encode(
-        getNamedTypesFromMetadata(
-          METADATA.build.pluginSetup.prepareInstallation.inputs
-        ),
-        [alice.address, targetConfig]
-      )
-    );
+      // Check that the setup worked
+      expect(await plugin.isMember(alice.address)).to.be.true;
 
-    const plugin = Admin__factory.connect(
-      results.preparedEvent.args.plugin,
-      deployer
-    );
-
-    // Check that the setup worked
-    expect(await plugin.isMember(alice.address)).to.be.true;
-
-    // Uninstall the current build.
-    await uninstallPLugin(
-      deployer,
-      psp,
-      dao,
-      plugin,
-      pluginSetupRef,
-      ethers.utils.defaultAbiCoder.encode(
-        getNamedTypesFromMetadata(
-          METADATA.build.pluginSetup.prepareUninstallation.inputs
+      // Uninstall the current build.
+      await uninstallPLugin(
+        deployer,
+        psp,
+        dao,
+        plugin,
+        pluginSetupRef,
+        ethers.utils.defaultAbiCoder.encode(
+          getNamedTypesFromMetadata(
+            METADATA.build.pluginSetup.prepareUninstallation.inputs
+          ),
+          []
         ),
         []
-      ),
-      []
-    );
-  });
-});
+      );
+    });
+  }
+);
 
 type FixtureResult = {
   deployer: SignerWithAddress;
