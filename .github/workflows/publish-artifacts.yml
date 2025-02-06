@@ -28,25 +28,25 @@ jobs:
       # Step 3: Install dependencies
       - name: Install Dependencies
         run: |
-          cd packages/artifact
+          cd packages/artifacts
           yarn install
 
       # Step 4: Generate ABIs
       - name: Generate ABIs
         run: |
-          cd packages/artifact
+          cd packages/artifacts
           yarn generate
 
       # Step 5: Build the package
       - name: Build Package
         run: |
-          cd packages/artifact
+          cd packages/artifacts
           yarn build
 
       # Step 6: Publish to NPM
       - name: Publish to NPM
         run: |
-          cd packages/artifact
+          cd packages/artifacts
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
