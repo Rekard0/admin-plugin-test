@@ -5,8 +5,8 @@ on:
     inputs:
       branch:
         description: 'Branch to publish from'
-        required: true
-        default: 'main'
+        required: false
+        default: ''
 
 jobs:
   publish:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ github.event.inputs.branch || github.ref }}  # ✅ Use manual input if provided, fallback to current branch
 
       # Step 2: Set up Node.js
       - name: Set up Node.js
