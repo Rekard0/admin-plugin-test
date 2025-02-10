@@ -1,10 +1,10 @@
-name: Publish Artifacts Package
+name: Publish Package
 
 on:
   workflow_dispatch:
 
 jobs:
-  publish-npm-artifacts:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,6 +16,11 @@ jobs:
         with:
           node-version: '18'
           registry-url: 'https://registry.npmjs.org/'
+
+      - name: Configure NPM for Scoped Package
+        run: |
+          echo "@rekard0:registry=https://registry.npmjs.org/" > ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       - name: Get Version from package.json
         id: get_version
@@ -50,7 +55,7 @@ jobs:
         run: |
           cd packages/artifacts
           if [[ "$VERSION" == *"-alpha"* ]]; then
-            npm publish --tag alpha
+            npm publish --tag alpha --access public
           else
-            npm publish --tag latest
+            npm publish --tag latest --access public
           fi
