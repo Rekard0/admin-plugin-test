@@ -1,10 +1,10 @@
-name: Publish Package
+name: Publish Artifacts
 
 on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  publish-artifacts-to-npm:
     runs-on: ubuntu-latest
 
     steps:
