@@ -1,12 +1,7 @@
-name: Publish Artifacts Package
+name: Publish Package
 
 on:
   workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to checkout'
-        required: true
-        default: 'main'
 
 jobs:
   publish:
@@ -15,17 +10,12 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.branch }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           registry-url: 'https://registry.npmjs.org/'
-
-      - name: Navigate to artifacts package
-        run: cd packages/artifacts
 
       - name: Get Version from package.json
         id: get_version
@@ -43,12 +33,16 @@ jobs:
           git push origin $VERSION
 
       - name: Install Dependencies
-        run: yarn install
+        run: |
+          cd packages/artifacts
+          yarn install
 
       - name: Build Package
         env:
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
-        run: yarn build
+        run: |
+          cd packages/artifacts
+          yarn build
 
       - name: Publish to NPM
         env:
