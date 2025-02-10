@@ -13,8 +13,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "generate": "bash generateAbis.sh"
+    "build": "yarn prepare-abi && rm -Rf dist && tsc -p tsconfig.json",
+    "prepare-abi": "bash generateAbis.sh"
   },
   "devDependencies": {
     "typescript": "^5.5.4"
