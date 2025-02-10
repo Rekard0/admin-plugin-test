@@ -1,7 +1,7 @@
 {
   "name": "@aragon/admin-plugin-artifacts",
   "author": "Aragon X",
-  "version": "1.4.0",
+  "version": "1.0.0-alpha",
   "license": "AGPL-3.0-or-later",
   "description": "The Aragon OSx Solidity contracts ABIs",
   "typings": "dist/index.d.ts",
