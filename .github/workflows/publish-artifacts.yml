@@ -19,7 +19,7 @@ jobs:
 
       - name: Configure NPM for Scoped Package
         run: |
-          echo "@rekard0:registry=https://registry.npmjs.org/" > ~/.npmrc
+          echo "@rekard0-test:registry=https://registry.npmjs.org/" > ~/.npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       - name: Get Version from package.json
