@@ -1,4 +1,4 @@
-name: Publish Package
+name: Publish Artifacts Package
 
 on:
   workflow_dispatch:
