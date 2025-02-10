@@ -1,6 +1,6 @@
 {
-  "name": "@aragon/admin-plugin-artifacts",
-  "author": "Aragon X",
+  "name": "@rekard0/admin-artifacts-test",
+  "author": "Rekardo X",
   "version": "1.0.0-alpha",
   "license": "AGPL-3.0-or-later",
   "description": "The Aragon OSx Solidity contracts ABIs",
