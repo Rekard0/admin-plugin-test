@@ -1,6 +1,6 @@
 {
-  "name": "@aragon/admin-plugin-artifacts",
-  "author": "Aragon X",
+  "name": "@rekard0-test/admin-artifacts-test",
+  "author": "Rekardo X",
   "version": "1.2.0",
   "license": "AGPL-3.0-or-later",
   "description": "The Admin Plugin ABI definition",
