@@ -7,6 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## v1.4.0
 
-## Added
+### Added
 
-- Add admin plugin's contracts artifacts of version 1.2.
+- First NPM release of the Plugin's ABI (release 1, build 2)
